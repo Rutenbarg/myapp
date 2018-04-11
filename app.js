@@ -1,7 +1,7 @@
 // Maak een voorraad auto objecten aan in een array object
 // Geen SQL database om eerst alleen een REST service te maken onafhankelijk van dataopslag
 let stock = [
-    { serienummer: 10001, merk: 'BMW', type: '635i', bouwjaar: 1985, kleur: 'Blauw', prijs: 10250 },
+    { serienummer: 10001, merk: 'BMW', type: '635i', bouwjaar: 1989, kleur: 'Blauw', prijs: 10250 },
     { serienummer: 10002, merk: 'BMW', type: '535i', bouwjaar: 2010, kleur: 'Grijs', prijs: 24500 },
     { serienummer: 10003, merk: 'BMW', type: '740d', bouwjaar: 1999, kleur: 'Rood', prijs: 2995 },
     { serienummer: 10004, merk: 'BMW', type: '330i', bouwjaar: 2003, kleur: 'Rood', prijs: 4500 },
