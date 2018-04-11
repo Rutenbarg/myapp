@@ -5,7 +5,7 @@ let stock = [
     { serienummer: 10002, merk: 'BMW', type: '535i', bouwjaar: 2010, kleur: 'Grijs', prijs: 24500 },
     { serienummer: 10003, merk: 'BMW', type: '740d', bouwjaar: 1999, kleur: 'Rood', prijs: 2995 },
     { serienummer: 10004, merk: 'BMW', type: '330i', bouwjaar: 2003, kleur: 'Rood', prijs: 4500 },
-    { serienummer: 10005, merk: 'BMW', type: '530d', bouwjaar: 2006, kleur: 'Groen', prijs: 9500 },
+    { serienummer: 10005, merk: 'BMW', type: '220i', bouwjaar: 2006, kleur: 'Groen', prijs: 9500 },
     { serienummer: 10006, merk: 'BMW', type: '218i', bouwjaar: 2015, kleur: 'Zwart', prijs: 28950 },
     { serienummer: 10007, merk: 'BMW', type: '118d', bouwjaar: 2012 , kleur: 'Zilver', prijs: 18900 },
     { serienummer: 10008, merk: 'BMW', type: 'M6',   bouwjaar: 2004, kleur: 'Bruin', prijs: 23450 },
