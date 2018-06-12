@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>BMW app</title>
+    <link rel="stylesheet" type="text/css" href="css/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" href="css/primeui.css">
+    <link rel="stylesheet" type="text/css" href="themes/primefaces-omega/theme.css">
+    <link rel="stylesheet" type="text/css" href="icons/css/font-awesome.min.css">
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
+    <script type="text/javascript" src="js/primeui.js"></script>
+    <script type="text/javascript" src="js/knockout-latest.js"></script>
+    <style>
+        body {
+            font-size: 14px;
+        }
+
+        #top-bar {
+            height: 80px;
+            background-image: url("/images/bmw-black.jpg");
+            background-repeat: no-repeat;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="top-bar">
+
+    </div>
+
+    <div id="stock-list"></div>
+
+    <div class="ui-g">
+        <div class="ui-g-6">
+
+        </div>
+        <div class="ui-g-6"></div>
+        <div class="ui-g-6">
+            <div class="ui-fluid">
+                <div class="ui-g-4">
+                    <button id="new" type="button">Invoer</button>
+                </div>
+                <div class="ui-g-4">
+                    <button id="delete" type="button">Vewijderen</button>
+                </div>
+            </div>
+        </div>
+        <div class="ui-g-6"></div>
+    </div>
+
+    <div id="inputfield">
+        <p data-bind="text: dialogMessage"></p>
+    </div>
+
+    <div id="">
+        <p data-bind="text: dialogMessage"></p>
+    </div>
+
+    <div id="dlg1">
+
+        <p data-bind="text: dialogMessage"></p>
+        <p <div data-bind="with: car">
+            <div class="ui-fluid">
+                <div class="ui-g-4">
+                    Merk:
+                </div>
+                <div class="ui-g-8">
+                    <input id="merk" data-bind="value: merk" />
+                </div>
+                <div class="ui-g-4">
+                    Type:
+                </div>
+                <div class="ui-g-8">
+                    <input id="type" data-bind="value: type" />
+                </div>
+                <div class="ui-g-4">
+                    Bouwjaar:
+                </div>
+                <div class="ui-g-8">
+                    <input id="bouwjaar" data-bind="value: bouwjaar" />
+                </div>
+                <div class="ui-g-4">
+                    Kleur:
+                </div>
+                <div class="ui-g-8">
+                    <input id="kleur" data-bind="value: kleur" />
+                </div>
+                <div class="ui-g-4">
+                    Prijs:
+                </div>
+                <div class="ui-g-8">
+                    <input id="prijs" data-bind="value: prijs" />
+                </div>
+            </div>
+        </p>
+    </div>
+
+    <div id="dlg">
+        <p data-bind="text: dialogMessage"></p>
+    </div>
+
+    <div id="growl"></div>
+
+    <script>
+
+        const PAGE_ROWS = 8;
+
+        var viewModel; // Define the KO view model as global to be used by other components
+
+        // The constructor function for the KO view model
+        function StockViewModel() {
+            var self = this;
+
+            self.car = ko.observable();
+
+            self.selectedPage = 0;
+
+            self.stock = ko.observableArray([
+            ]);
+
+            self.dialogMessage = ko.observable();
+        }
+
+        function getCars() {
+            $.getJSON('cars', function (cars, textStatus, jqXHRta) {
+                for (var i in cars) {
+                    viewModel.stock.push(cars[i]);
+                }
+                $('#stock-list').puidatatable('reload');
+                if (cars.length > 0) {
+                    selectRow(0);
+                } else {
+                    newCar();
+                }
+                //let row = $('tbody tr').eq(0);
+                //$('#stock-list').puidatatable('selectRow', row, false);
+            });
+        }
+
+        function newCar() {
+            let newCar = {
+                serienummer: "",
+                merk: "",
+                type: "",
+                bouwjaar: "",
+                kleur: "",
+                prijs: ""
+            }
+            viewModel.car(newCar);
+        }
+
+        function saveCar() {
+            let car = viewModel.car();
+            if (car.serienummer > 0) {
+                modifyCar();
+            } else {
+                addCar();
+            }
+        }
+
+        function addCar() {
+            let car = viewModel.car();
+            car = JSON.stringify(car);
+            $.ajax({
+                url: "cars",
+                method: "POST",
+                contentType: "application/json",
+                data: car,
+                dataType: "json",
+                success: function (newCar, textStatus, jqXHRta) {
+                    //viewModel.stock.unshift(newCar); // add to the begin of the array
+                    viewModel.stock.push(newCar); // add to the end of the array
+                    $('#stock-list').puidatatable('reload');
+
+                    let currentPage = 0;
+                    let totalRows = viewModel.stock().length;
+                    let rowIndex = viewModel.stock.indexOf(newCar); // find the row index of the data
+
+                    // how many pages do I need?
+                    // are there rows left over by dividing total rows by rows per page
+                    let pages = 0;
+                    let rowsRemaining = totalRows % PAGE_ROWS;
+                    if (rowsRemaining > 0) {
+                        let roundedTotalRows = totalRows - rowsRemaining;
+                        pages = roundedTotalRows / PAGE_ROWS;
+                        pages++; // add 1 page because we have left over remaining rows
+                    } else {
+                        pages = totalRows / PAGE_ROWS;
+                    }
+
+                    // Find the page where our row fits in
+                    let min = 0;
+                    let max = PAGE_ROWS - 1;
+                    let page = 0;
+                    while (page < pages) {
+                        if (rowIndex >= min && rowIndex <= max) {
+                            currentPage = page;
+                            page = pages - 1;
+                        }
+                        min = min + PAGE_ROWS;
+                        max = max + PAGE_ROWS;
+                        page++;
+                    }
+
+                    //let paginator = $('#stock-list').puidatatable('getPaginator').puipaginator('instance');
+                    //let state = paginator.status.state;
+                    let pageRow = ((rowIndex + 1) % PAGE_ROWS) - 1;
+
+                    $('#stock-list').puidatatable('getPaginator').puipaginator('setPage', currentPage, false); // after reload go to correct page
+                    selectRow(pageRow);
+
+                    //selectRow(0);
+                    addInfoMessage("Er is 1 auto toegevoegd!");
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                    addErrorMessage(jqXHR.status + ' : ' + errorThrown);
+                },
+                complete: function (newCar) {
+                    console.log(newCar);
+                }
+            });
+        }
+
+        function modifyCar() {
+            let car = viewModel.car();
+            let url = "cars" + "/" + car.serienummer;
+            car = JSON.stringify(car);
+            $.ajax({
+                url: url,
+                method: "PUT",
+                contentType: "application/json",
+                data: car,
+                dataType: "json",
+                success: function (newCar, textStatus, jqXHRta) {
+                    let selectedCar = $('#stock-list').puidatatable('getSelection')[0];
+                    //let rowIndex = viewModel.stock.indexOf(selectedCar); // remember row index original data
+                    viewModel.stock.replace(selectedCar, newCar); // replace the current car with the new car
+                    $('#stock-list').puidatatable('reload'); // reload the datasource of the datatable
+                    //$('#stock-list').puidatatable('getPaginator').puipaginator('setPage', viewModel.selectedPage, false); // after reload go to the original page
+                    //let pageRow = ((rowIndex + 1) % PAGE_ROWS) - 1;
+                    //selectRow(pageRow);
+
+                    let currentPage = 0;
+                    let totalRows = viewModel.stock().length;
+                    let rowIndex = viewModel.stock.indexOf(newCar); // find the row index of the data
+
+                    // how many pages do I need?
+                    // are there rows left over by dividing total rows by rows per page
+                    let pages = 0;
+                    let rowsRemaining = totalRows % PAGE_ROWS;
+                    if (rowsRemaining > 0) {
+                        let roundedTotalRows = totalRows - rowsRemaining;
+                        pages = roundedTotalRows / PAGE_ROWS;
+                        pages++; // add 1 page because we have left over remaining rows
+                    } else {
+                        pages = totalRows / PAGE_ROWS;
+                    }
+
+                    // Find the page where our row fits in
+                    let min = 0;
+                    let max = PAGE_ROWS - 1;
+                    let page = 0;
+                    while (page < pages) {
+                        if (rowIndex >= min && rowIndex <= max) {
+                            currentPage = page;
+                            page = pages - 1;
+                        }
+                        min = min + PAGE_ROWS;
+                        max = max + PAGE_ROWS;
+                        page++;
+                    }
+
+                    //let paginator = $('#stock-list').puidatatable('getPaginator').puipaginator('instance');
+                    //let state = paginator.status.state;
+                    let pageRow = ((rowIndex + 1) % PAGE_ROWS) - 1;
+
+                    $('#stock-list').puidatatable('getPaginator').puipaginator('setPage', currentPage, false); // after reload go to correct page
+                    selectRow(pageRow);
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                    addErrorMessage(jqXHR.status + ' : ' + errorThrown);
+                },
+                complete: function (newCar) {
+                    console.log(newCar);
+                }
+            });
+        }
+
+        function removeCar() {
+            var self = this;
+            let car = $('#stock-list').puidatatable('getSelection')[0];
+            let url = "cars" + "/" + car.serienummer;
+            car = JSON.stringify(car);
+            $.ajax({
+                url: url,
+                method: "DELETE",
+                dataType: "json",
+                success: function (newCar, textStatus, jqXHRta) {
+
+                    let selectedCar = $('#stock-list').puidatatable('getSelection')[0];
+                    let rowIndex = viewModel.stock.indexOf(selectedCar); // remember row index original data
+                    viewModel.stock.remove(selectedCar); // remove the current car from the stock list
+                    $('#stock-list').puidatatable('reload'); // reload the datasource of the datatable
+
+                    let currentPage = 0;
+                    let totalRows = viewModel.stock().length;
+                    if (totalRows > 0) {
+                        // if the last row was deleted lower the index with 1 to the curent last one
+                        if (rowIndex + 1 > totalRows) {
+                            rowIndex--;
+                        }
+                        // how many pages do I need?
+                        // are there rows left over by dividing total rows by rows per page
+                        let pages = 0;
+                        let rowsRemaining = totalRows % PAGE_ROWS;
+                        if (rowsRemaining > 0) {
+                            let roundedTotalRows = totalRows - rowsRemaining;
+                            pages = roundedTotalRows / PAGE_ROWS;
+                            pages++; // add 1 page because we have left over remaining rows
+                        } else {
+                            pages = totalRows / PAGE_ROWS;
+                        }
+
+                        // Find the page where our row fits in
+                        let min = 0;
+                        let max = PAGE_ROWS - 1;
+                        let page = 0;
+                        while (page < pages) {
+                            if (rowIndex >= min && rowIndex <= max) {
+                                currentPage = page;
+                                page = pages - 1;
+                            }
+                            min = min + PAGE_ROWS;
+                            max = max + PAGE_ROWS;
+                            page++;
+                        }
+
+                        //let paginator = $('#stock-list').puidatatable('getPaginator').puipaginator('instance');
+                        //let state = paginator.status.state;
+                        let pageRow = ((rowIndex + 1) % PAGE_ROWS) - 1;
+
+                        $('#stock-list').puidatatable('getPaginator').puipaginator('setPage', currentPage, false); // after reload go to correct page
+                        selectRow(pageRow);
+                    } else {
+                        self.newCar(); // clear the input fields
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                    addErrorMessage(jqXHR.status + ' : ' + errorThrown);
+                },
+                complete: function (newCar) {
+                    console.log(newCar);
+                }
+            });
+        }
+
+        function selectRow(rowNumber) {
+            let row = $('tbody tr').eq(rowNumber);
+            $('#stock-list').puidatatable('selectRow', row, false);
+        }
+
+        function addInfoMessage(textMessage) {
+            $('#growl').puigrowl('show', [{ severity: 'info', summary: 'INFO', detail: textMessage }]);
+        }
+
+        function addErrorMessage(textMessage) {
+            $('#growl').puigrowl('show', [{ severity: 'error', summary: 'FOUT', detail: textMessage }]);
+        }
+
+        // JQuery start function when the DOM is loaded
+        $(document).ready(function () {
+
+            // Make the view model object by invoking the constructor function
+            viewModel = new StockViewModel();
+
+            // Make the message box
+            $('#growl').puigrowl();
+
+
+            $('#dlg1').puidialog({
+                width: 600,
+                title: 'Nieuwe auto toevoegen of wijzigen',
+                showEffect: 'fade',
+                hideEffect: 'fade',
+                minimizable: true,
+                maximizable: true,
+                responsive: false,
+                modal: true,
+            
+                buttons: [
+                    {
+                        text: 'Bewaren',
+                        icon: 'fa-check',
+                        click: function () {
+                            $('#dlg1').puidialog('hide');
+                            saveCar();
+                        }
+                    },
+                    {
+                        text: 'Annuleren',
+                        icon: 'fa-close',
+                        click: function () {
+                            $('#dlg1').puidialog('hide');
+                        }
+                    },
+                    {
+                        text: 'Toevoegen',
+                        icon: 'fa-check',
+                        click: function () {
+                            $('#dlg1').puidialog('show')
+                            newCar();
+                            // $('#merk').focus();
+                        }
+                    }
+                ]
+            });
+
+            $('#dlg').puidialog({
+                width: 400,
+                title: 'Melding',
+                showEffect: 'fade',
+                hideEffect: 'fade',
+                minimizable: false,
+                maximizable: false,
+                responsive: false,
+                modal: true,
+                buttons: [
+                    {
+                        text: 'Ja',
+                        icon: 'fa-check',
+                        click: function () {
+                            $('#dlg').puidialog('hide');
+                            removeCar();
+                        }
+                    },
+                    {
+                        text: 'Nee',
+                        icon: 'fa-close',
+                        click: function () {
+                            $('#dlg').puidialog('hide');
+                        }
+                    }
+                ]
+            });
+
+
+            $('#new').puibutton({
+                click: function () {
+                    $('#dlg1').puidialog('show');
+                    newCar()
+                }
+            });
+
+            $('#save').puibutton({
+                click: function () {
+                    saveCar();
+                }
+            });
+
+            $('#delete').puibutton({
+                click: function () {
+                    let selection = $('#stock-list').puidatatable('getSelection');
+                    if (selection.length > 0) {
+                        viewModel.dialogMessage("Verwijderen doorvoeren van de geslecteerde auto?");
+                        $('#dlg').puidialog('show');
+                    }
+                }
+            });
+
+            let table = $('#stock-list').puidatatable({
+                caption: 'Voorraad',
+                emptyMessage: 'De voorraad is leeg',
+                datasource: viewModel.stock(),
+                columns: [
+                    { field: 'serienummer', headerText: 'Serienummer' },
+                    { field: 'merk', headerText: 'Merk' },
+                    { field: 'type', headerText: 'Type' },
+                    { field: 'bouwjaar', headerText: 'Bouwjaar' },
+                    { field: 'kleur', headerText: 'Kleur' },
+                    { field: 'prijs', headerText: 'Prijs' }
+                ],
+                paginator: {
+                    rows: PAGE_ROWS
+                },
+                selectionMode: "single",
+                rowSelect: function (event, car) {
+                    viewModel.car(Object.assign({}, car));
+                },
+                rowUnselect: function (event, car) {
+                    newCar();
+                }
+            });
+
+            // get a reference to the paginator object of the table
+            //let paginator = table.puidatatable('getPaginator').puipaginator('instance');
+
+            // overwite the paginate function with own function to access to the state object
+            // this is a trick to get the job done
+            //.options.paginate = function (event, state) {
+            //    // get the current page and put it in the viewModel
+            //    viewModel.selectedPage = state.page;
+            //    // perform the default behaviour otherwise nothing happens
+            //    $('#stock-list').puidatatable('instance').paginate();
+            //}
+
+            // instanciate the input text components
+            $('#merk').puiinputtext();
+            $('#type').puiinputtext();
+            $('#bouwjaar').puiinputtext();
+            $('#kleur').puiinputtext();
+            $('#prijs').puiinputtext();
+
+            // get the initial stock from the web api service
+            getCars();
+
+            //var table =  $('#stock-list').puidatatable();
+            //$('#stock-list').puidatatable('unselectAllRows');
+            //$('#stock-list').puidatatable('selectRow', $('tbody tr').eq(2), true);
+            //var t = $('#stock-list').puidatatable('instance');
+            //t.unselectAllRows();
+            //$('#stock-list').puidatatable().unselectAllRows();
+            //$('#stock-list').puidatatable('selectRow(2, true)');
+            //$('#stock-list').reload();
+
+
+            // Make the bindings in the HTML to match the variables in the view model
+            ko.applyBindings(viewModel); // bind GUI components to the viewModel
+        });
+
+    </script>
+</body>
+
+</html>
